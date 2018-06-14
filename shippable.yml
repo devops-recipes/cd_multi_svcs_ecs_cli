@@ -15,7 +15,7 @@ img_temp: &fetch_img_info
 
 aws_td_rev: &create_ecs_td_rev
   - |
-      shipctl replace $REPO_PATH/templates/$SVCS_CONTEXT/service.json $REPO_PATH/templates/$SVCS_CONTEXT/task.json
+      shipctl replace templates/$SVCS_CONTEXT/service.json templates/$SVCS_CONTEXT/task.json
       REVISION=$(aws ecs register-task-definition --cli-input-json file://$REPO_PATH/templates/$SVCS_CONTEXT/task.json --output json --query taskDefinition.revision)
       echo "revision is $REVISION"
 
@@ -35,7 +35,7 @@ resources:
     type: gitRepo
     integration: "drship_github"
     versionTemplate:
-      sourceName: "devops-recipes/cd_ecs_cli"
+      sourceName: "devops-recipes/cd_multi_svcs_ecs_cli"
       branch: master
 
 jobs:
