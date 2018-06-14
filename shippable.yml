@@ -23,7 +23,7 @@ aws_rfr_svcs: &svcs_refresh
   - |
       EXISTS=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $SVCS_NAME --output json --query failures[0].reason)
       echo $EXISTS
-      if [ $EXISTS == "MISSING" ]
+      if [ $EXISTS == "\"MISSING\"" ]
       then
         aws ecs create-service --service-name $SVCS_NAME --cluster $ECS_CLUSTER --task-definition $FAMILY:$REVISION --desired-count $REPLICAS;
       else
