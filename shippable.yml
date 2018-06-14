@@ -1,0 +1,81 @@
+templates: &config_aws_cli
+  - |
+      AWS_ACCESS_KEY_ID=$(shipctl get_integration_resource_field aws_ecs_cluster "accessKey")
+      AWS_SECRET_ACCESS_KEY=$(shipctl get_integration_resource_field aws_ecs_cluster "secretKey")
+      ECS_CLUSTER_REGION=$(shipctl get_resource_version_key "aws_ecs_cluster" "region")
+      ECS_CLUSTER=$(shipctl get_resource_version_key "aws_ecs_cluster" "sourceName")
+
+resources:
+# Templates Files repo
+  - name: cd_ms_ecs_cli_repo
+    type: gitRepo
+    integration: "drship_github"
+    versionTemplate:
+      sourceName: "devops-recipes/cd_ecs_cli"
+      branch: master
+
+jobs:
+  - name: test_temp
+    type: runSh
+    steps:
+      - IN: aws_ecs_cluster # defined here https://github.com/devops-recipes/prov_aws_ecs_terraform/blob/master/shippable.yml
+        switch: off
+      - TASK:
+          name: test
+          runtime:
+            options:
+              env:
+                - CLUST_RES: "aws_ecs_cluster"
+                - REPLICAS: 1
+                - ENVIRONMENT: "test"
+                - FAMILY: "app_cli"
+          script:
+            - *config_aws_cli
+            - echo $AWS_ACCESS_KEY_ID
+
+  - name: deploy_svcA_ecs_cli
+    type: runSh
+    steps:
+      - IN: cd_ms_ecs_cli_repo
+      - IN: node_app_img_dh # defined here https://github.com/devops-recipes/node_app/blob/master/shippable.yml
+      - IN: aws_ecs_cluster # defined here https://github.com/devops-recipes/prov_aws_ecs_terraform/blob/master/shippable.yml
+        switch: off
+      - TASK:
+          name: deploy_app
+          runtime:
+            options:
+              env:
+                - APP_NAME: "app_ms_A_cli"
+                - REPLICAS: 1
+                - ENVIRONMENT: "test"
+                - FAMILY: "app_ms_cli"
+          script:
+            - |
+                AWS_ACCESS_KEY_ID=$(shipctl get_integration_resource_field aws_ecs_cluster "accessKey")
+                AWS_SECRET_ACCESS_KEY=$(shipctl get_integration_resource_field aws_ecs_cluster "secretKey")
+                ECS_CLUSTER_REGION=$(shipctl get_resource_version_key "aws_ecs_cluster" "region")
+                ECS_CLUSTER=$(shipctl get_resource_version_key "aws_ecs_cluster" "sourceName")
+            - |
+                SVCS_NAME=$APP_NAME"_svcs"
+                export APP_IMG=$(shipctl get_resource_version_key "node_app_img_dh" sourceName)
+                export APP_IMG_TAG=$(shipctl get_resource_version_key "node_app_img_dh" "versionName")
+            - |
+                aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+                aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+                aws configure set region "$ECS_CLUSTER_REGION"
+            - aws ecs list-clusters
+            - |
+                REPO_PATH=$(shipctl get_resource_state "cd_ms_ecs_cli_repo")
+                pushd $REPO_PATH
+            - |
+                shipctl replace templates/svcA/service.json templates/svcA/task.json
+                REVISION=$(aws ecs register-task-definition --cli-input-json file://$REPO_PATH/templates/svcA/task.json --output json --query taskDefinition.revision)
+                echo "revision is $REVISION"
+            - |
+                EXISTS=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $SVCS_NAME --output json --query failures[0].reason)
+                if [ $EXISTS == "MISSING" ]
+                then
+                  aws ecs create-service --service-name $SVCS_NAME --cluster $ECS_CLUSTER --task-definition $FAMILY:$REVISION --desired-count $REPLICAS;
+                else
+                  aws ecs update-service --service $SVCS_NAME --cluster $ECS_CLUSTER --task-definition $FAMILY:$REVISION;
+                fi
