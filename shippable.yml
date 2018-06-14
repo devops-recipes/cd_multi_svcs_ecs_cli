@@ -44,6 +44,8 @@ jobs:
     type: runSh
     steps:
       - IN: cd_ms_ecs_cli_repo
+      - IN: trig_svcA
+      - IN: trig_all
       - IN: node_app_img_dh # defined here https://github.com/devops-recipes/node_app/blob/master/shippable.yml
       - IN: aws_ecs_cluster # defined here https://github.com/devops-recipes/prov_aws_ecs_terraform/blob/master/shippable.yml
         switch: off
@@ -78,6 +80,8 @@ jobs:
     type: runSh
     steps:
       - IN: cd_ms_ecs_cli_repo
+      - IN: trig_svcB
+      - IN: trig_all
       - IN: node_app_img_dh # defined here https://github.com/devops-recipes/node_app/blob/master/shippable.yml
       - IN: aws_ecs_cluster # defined here https://github.com/devops-recipes/prov_aws_ecs_terraform/blob/master/shippable.yml
         switch: off
@@ -107,3 +111,24 @@ jobs:
       - aws_ecs
       - aws
       - aws_cli
+
+  - name: trig_svcB
+    type: runSh
+    steps:
+      - TASK:
+          script:
+            - pwd
+
+  - name: trig_svcA
+    type: runSh
+    steps:
+      - TASK:
+          script:
+            - pwd
+
+  - name: trig_all
+    type: runSh
+    steps:
+      - TASK:
+          script:
+            - pwd
