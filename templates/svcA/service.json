@@ -1,0 +1,7 @@
+{
+  "desiredCount": "${REPLICAS}",
+  "deploymentConfiguration": {
+    "maximumPercent": 0,
+    "minimumHealthyPercent": 0
+  }
+}
