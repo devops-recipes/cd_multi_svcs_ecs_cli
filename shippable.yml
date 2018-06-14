@@ -57,7 +57,7 @@ jobs:
                 - APP_NAME: "app_ms_A_cli"
                 - REPLICAS: 1
                 - ENVIRONMENT: "test"
-                - FAMILY: "app_ms_cli"
+                - FAMILY: "app_ms_A_cli"
           script:
             - *config_aws_cli
             - aws ecs list-clusters
@@ -69,25 +69,41 @@ jobs:
             - pushd $REPO_PATH
             - *create_ecs_td_rev
             - *svcs_refresh
+    flags:
+      - aws_ecs
+      - aws
+      - aws_cli
 
-  - name: test_temp
+  - name: deploy_svcB_ecs_cli
     type: runSh
     steps:
+      - IN: cd_ms_ecs_cli_repo
       - IN: node_app_img_dh # defined here https://github.com/devops-recipes/node_app/blob/master/shippable.yml
       - IN: aws_ecs_cluster # defined here https://github.com/devops-recipes/prov_aws_ecs_terraform/blob/master/shippable.yml
         switch: off
       - TASK:
-          name: test
+          name: deploy_app
           runtime:
             options:
               env:
                 - CLUST_RES: "aws_ecs_cluster"
                 - IMG_RES: "node_app_img_dh"
+                - APP_NAME: "app_ms_B_cli"
                 - REPLICAS: 1
                 - ENVIRONMENT: "test"
-                - FAMILY: "app_cli"
+                - FAMILY: "app_ms_B_cli"
           script:
             - *config_aws_cli
-            - echo $AWS_ACCESS_KEY_ID
+            - aws ecs list-clusters
             - *fetch_img_info
-            - echo $APP_IMG_TAG
+            - |
+                SVCS_NAME=$APP_NAME"_svcs"
+                SVCS_CONTEXT=svcB
+                REPO_PATH=$(shipctl get_resource_state "cd_ms_ecs_cli_repo")
+            - pushd $REPO_PATH
+            - *create_ecs_td_rev
+            - *svcs_refresh
+    flags:
+      - aws_ecs
+      - aws
+      - aws_cli
