@@ -1,9 +1,17 @@
-templates: &config_aws_cli
+aws_temp: &config_aws_cli
   - |
-      AWS_ACCESS_KEY_ID=$(shipctl get_integration_resource_field aws_ecs_cluster "accessKey")
-      AWS_SECRET_ACCESS_KEY=$(shipctl get_integration_resource_field aws_ecs_cluster "secretKey")
-      ECS_CLUSTER_REGION=$(shipctl get_resource_version_key "aws_ecs_cluster" "region")
-      ECS_CLUSTER=$(shipctl get_resource_version_key "aws_ecs_cluster" "sourceName")
+      AWS_ACCESS_KEY_ID=$(shipctl get_integration_resource_field "$CLUST_RES" "accessKey")
+      AWS_SECRET_ACCESS_KEY=$(shipctl get_integration_resource_field "$CLUST_RES" "secretKey")
+      ECS_CLUSTER_REGION=$(shipctl get_resource_version_key "$CLUST_RES" "region")
+      ECS_CLUSTER=$(shipctl get_resource_version_key "$CLUST_RES" "sourceName")
+      aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+      aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+      aws configure set region "$ECS_CLUSTER_REGION"
+
+img_temp: &fetch_img_info
+  - |
+      export APP_IMG=$(shipctl get_resource_version_key "$IMG_RES" sourceName)
+      export APP_IMG_TAG=$(shipctl get_resource_version_key "$IMG_RES" "versionName")
 
 resources:
 # Templates Files repo
@@ -32,6 +40,8 @@ jobs:
           script:
             - *config_aws_cli
             - echo $AWS_ACCESS_KEY_ID
+            - *fetch_img_info
+            - echo $APP_IMG_TAG
 
   - name: deploy_svcA_ecs_cli
     type: runSh
@@ -45,6 +55,8 @@ jobs:
           runtime:
             options:
               env:
+                - CLUST_RES: "aws_ecs_cluster"
+                - IMG_RES: "node_app_img_dh"
                 - APP_NAME: "app_ms_A_cli"
                 - REPLICAS: 1
                 - ENVIRONMENT: "test"
