@@ -26,6 +26,7 @@ jobs:
   - name: test_temp
     type: runSh
     steps:
+      - IN: node_app_img_dh # defined here https://github.com/devops-recipes/node_app/blob/master/shippable.yml
       - IN: aws_ecs_cluster # defined here https://github.com/devops-recipes/prov_aws_ecs_terraform/blob/master/shippable.yml
         switch: off
       - TASK:
@@ -34,6 +35,7 @@ jobs:
             options:
               env:
                 - CLUST_RES: "aws_ecs_cluster"
+                - IMG_RES: "node_app_img_dh"
                 - REPLICAS: 1
                 - ENVIRONMENT: "test"
                 - FAMILY: "app_cli"
